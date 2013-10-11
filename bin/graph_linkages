@@ -1,0 +1,59 @@
+#!/usr/bin/python
+
+import os,sys,string
+
+from subprocess import Popen,PIPE
+
+modules = []
+external_symbols = {}
+
+for filename in sys.argv[1:]:
+    nm_process = Popen(["/usr/bin/nm", filename], bufsize=4096, stdout=PIPE)
+
+    module = {
+        'filename': filename,
+        'name': os.path.splitext(os.path.basename(filename))[0],
+        'provides': [],
+        'requires': [],
+        'dependencies': {}
+    }
+    modules.append(module)
+
+    # nm output looks like this:
+    #                 U stdout
+    #                 U umask
+    #000000000000031a t usage
+    #0000000000000343 t write_pidfile
+    for line in nm_process.stdout:
+        address = line[0:16]
+        linkage_type = line[17]
+        linkage_symbol = line[19:-1]
+        if linkage_type == 'T':
+            module['provides'].append(linkage_symbol)
+            external_symbols[linkage_symbol] = module
+        elif linkage_type == 'U':
+            module['requires'].append(linkage_symbol)
+
+
+for module in modules:
+    for symbol in module['requires']:
+        if symbol in external_symbols:
+            dependency = external_symbols[symbol]['name']
+            if dependency in module['dependencies']:
+                module['dependencies'][dependency].append(symbol)
+            else:
+                module['dependencies'][dependency] = [symbol]
+
+
+print "digraph {"
+for module in modules:
+    for dependency in module['dependencies']:
+        print "    %s -> %s [label=\"%s\"]" % (module['name'], dependency, string.join(module['dependencies'][dependency], "\\n"))
+
+print "}"
+
+
+
+
+
+

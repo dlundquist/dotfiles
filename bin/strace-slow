@@ -1,0 +1,40 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+pipe(CLIENT_ERR_IN, CLIENT_ERR_OUT)
+    or die $!;
+
+my $pid = fork();
+die $! unless defined $pid;
+
+if ($pid == 0) {
+    close CLIENT_ERR_IN
+        or die $!;
+    select CLIENT_ERR_OUT; $| = 1;
+    open(STDERR, ">&CLIENT_ERR_OUT")
+        or die $!;
+    close CLIENT_ERR_OUT
+        or die $!;
+
+    exec('/usr/bin/strace', '-T', @ARGV)
+        or die $!;
+}
+# Parent
+close CLIENT_ERR_OUT;
+
+
+while (my $line = <CLIENT_ERR_IN>) {
+    if ($line =~ /.+ <(\d+\.\d+)>$/) {
+        print $line if $1 > 0.01;
+    } else {
+        print $line;
+    }
+}
+
+close CLIENT_ERR_IN;
+
+# Propagate strace's exit code
+waitpid($pid, 0);
+exit($? >> 8);
