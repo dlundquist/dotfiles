@@ -1,4 +1,7 @@
 #!/usr/bin/perl
+#
+# strace slow system calls only
+#
 
 use strict;
 use warnings;

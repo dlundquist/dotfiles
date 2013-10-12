@@ -1,4 +1,16 @@
 #!/usr/bin/python
+#
+# Copyright 2013 Dustin Lundquist <dustin@null-ptr.net>
+#
+# Generate a GraphViz file of the linkage dependencies between a collection of
+# object files.
+#
+# Example:
+#   ./configure
+#   make
+#   graph_linkages `find . -type f -name \*.o` > linkage_graph.dot
+#   dot -Tpng linkage_graph.dot > linkage_graph.png
+#
 
 import os,sys,string
 
@@ -48,7 +60,7 @@ for module in modules:
 print "digraph {"
 for module in modules:
     for dependency in module['dependencies']:
-        print "    %s -> %s [label=\"%s\"]" % (module['name'], dependency, string.join(module['dependencies'][dependency], "\\n"))
+    print "    %s -> %s [label=\"%s\"]" % (module['name'], dependency, string.join(module['dependencies'][dependency], "\\n"))
 
 print "}"
 
