@@ -12,7 +12,7 @@
 #   dot -Tpng linkage_graph.dot > linkage_graph.png
 #
 
-import os,sys,string
+import os,sys,string,re
 
 from subprocess import Popen,PIPE
 
@@ -24,7 +24,7 @@ for filename in sys.argv[1:]:
 
     module = {
         'filename': filename,
-        'name': os.path.splitext(os.path.basename(filename))[0],
+        'name': re.sub('-', '_', os.path.splitext(os.path.basename(filename))[0]),
         'provides': [],
         'requires': [],
         'dependencies': {}
@@ -36,14 +36,16 @@ for filename in sys.argv[1:]:
     #                 U umask
     #000000000000031a t usage
     #0000000000000343 t write_pidfile
+    #0000000000000008 C http_protocol
+    #0000000000000000 D http_protocol
     for line in nm_process.stdout:
         address = line[0:16]
         linkage_type = line[17]
-        linkage_symbol = line[19:-1]
-        if linkage_type == 'T':
+        linkage_symbol = re.sub('-', '_', line[19:-1])
+        if linkage_type == 'T' or linkage_type == 'D':
             module['provides'].append(linkage_symbol)
             external_symbols[linkage_symbol] = module
-        elif linkage_type == 'U':
+        elif linkage_type == 'U' or linkage_type == 'C':
             module['requires'].append(linkage_symbol)
 
 
@@ -60,7 +62,7 @@ for module in modules:
 print "digraph {"
 for module in modules:
     for dependency in module['dependencies']:
-    print "    %s -> %s [label=\"%s\"]" % (module['name'], dependency, string.join(module['dependencies'][dependency], "\\n"))
+        print "    %s -> %s [label=\"%s\"]" % (module['name'], dependency, string.join(module['dependencies'][dependency], "\\n"))
 
 print "}"
 
